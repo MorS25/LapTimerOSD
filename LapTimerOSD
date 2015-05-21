@@ -22,10 +22,12 @@ public:
   String BestTimeStr();
   String PrevTimeStr();
   String CurrentTimeStr();
+  byte* CurrentTimeByte();
+  String formatTime(unsigned long t);
 }
 ;
 
-int RECV_PIN = 11;
+int RECV_PIN = 9;
 int SEND_PIN = 13;
 int LED_PIN = 12;
 
@@ -74,7 +76,7 @@ void handleIRSensor()
     time = millis();
     AddTimestamp(time);
    
-    SendIR2Beacon();
+    // SendIR2Beacon();
     
     irrecv.resume(); // Receive the next value
     irrecv.enableIRIn(); // Start the receiver
@@ -85,24 +87,19 @@ void setup()
 {
   SPI.begin();
   
-  osd.init(10);
+  osd.init(6);
   osd.setDisplayOffsets(60,18);
   osd.setBlinkParams(_8fields, _BT_BT);
  
   osd.activateOSD();
-  osd.printMax7456Char(0x01,0,1);
-  osd.print("Hello world :)",1,3);
-  osd.print("Current Arduino time :",1,4);
-
-  osd.printMax7456Char(0xD1,9,6,true);
-  osd.print("00'00\"",10,6);  
-  osd.printMax7456Chars(tab,2,12,7);
-  //pinMode(redLed,OUTPUT);
-  //pinMode(greenLed,OUTPUT);
   
-  //base time = 160ms,time on = time off.
+  //laptimes.add(4000);
+  //laptimes.add(8000);
+  //laptimes.add(12345);
   
   irrecv.enableIRIn(); // Start the receiver
+  //pinMode(5,OUTPUT);
+  //digitalWrite(5, HIGH); 
 }
 
 
@@ -110,12 +107,80 @@ void loop()
 {
   counter = millis()/1000;
   
-  osd.print(int(counter/60),10,6,2,0,false,true);
-  osd.print(int(counter%60),13,6,2,0,false,true);
+  if(counter%2==0)
+  {
+    osd.clearScreen();
+  }
   
-  delay(100);
+  // Show only if data available.
+  if(laptimes.Size > 0)
+  {
+    char charBuf[50] = {'\0'};
+    
+    String s = laptimes.CurrentTimeStr();
+    s.toCharArray(charBuf,50);
+    osd.print(charBuf, 0, 14);
   
+    s = laptimes.PrevTimeStr();
+    s.toCharArray(charBuf,50);
+    osd.print(charBuf, 14, 13);
+  
+    s = laptimes.BestTimeStr();
+    s.toCharArray(charBuf,50);
+    osd.print(charBuf, 14, 14);
+    delay(100);
+  }
   handleIRSensor();
+}
+
+String RollingArray::formatTime(unsigned long t)
+{
+  String outStr = "";
+  unsigned long seconds = (t/1000)%60;
+  unsigned long deci = (t%1000)/10;
+  unsigned long minutes = t/60000;
+  
+  if(minutes <1)
+  {
+    outStr += "00";
+  }
+  else if(minutes < 10)
+  {
+    outStr += "0";
+    outStr += minutes;
+  }
+  else 
+  {
+    outStr += minutes;
+  }
+  
+  outStr += ":";
+  
+  if(seconds < 10)
+  {
+    outStr += "0";
+  }
+  
+  outStr += seconds;
+  
+  outStr += ":";
+  
+  if(deci < 1)
+  {
+    outStr += "00";
+  }
+  else if(deci < 10)
+  {
+    outStr += "0";
+    outStr += deci;
+  }
+  else
+  {
+    outStr += deci;
+  }
+  
+  return outStr;
+  
 }
 
 
@@ -164,14 +229,10 @@ void RollingArray::add(unsigned long t)
 String RollingArray::BestTimeStr()
 {
   String outStr = "";
-  if(BestLapTime < MAX_BEST_TIME)
+  if(BestLapTime < MAX_BEST_TIME && Size > 1)
   {
     outStr = "Best ";
-    unsigned long seconds = BestLapTime/1000;
-    unsigned long deci = BestLapTime%1000;
-    outStr += seconds;
-    outStr += ":";
-    outStr += deci;
+    outStr += formatTime(BestLapTime);
   }
   return outStr;
 }
@@ -183,11 +244,7 @@ String RollingArray::PrevTimeStr()
   {
     outStr = "Prev ";
     unsigned long laptime = TimeStamps[Size-1] - TimeStamps[Size-2];
-    unsigned long seconds = laptime/1000;
-    unsigned long deci = laptime%1000;
-    outStr += seconds;
-    outStr += ":";
-    outStr += deci;
+    outStr += formatTime(laptime);
   }
   return outStr;
 }
@@ -199,7 +256,7 @@ String RollingArray::ToString()
   {
     outStr = "Best ";
     unsigned long seconds = BestLapTime/1000;
-    unsigned long deci = BestLapTime%1000;
+    unsigned long deci = (BestLapTime%1000)/10;
     outStr += seconds;
     outStr += ":";
     outStr += deci;
@@ -213,11 +270,20 @@ String RollingArray::CurrentTimeStr()
   {
     outStr = "Curr ";
     unsigned long laptime = millis() - TimeStamps[Size-1];
-    unsigned long seconds = laptime/1000;
-    unsigned long deci = laptime%1000;
-    outStr += seconds;
-    outStr += ":";
-    outStr += deci;
+    outStr += formatTime(laptime);
   }
   return outStr;
+}
+
+byte* RollingArray::CurrentTimeByte()
+{
+  // curr 00:00
+  byte outbyte[5];
+  outbyte[0] = 99;
+  outbyte[1] = 0x75;
+  outbyte[2] = 0x72;
+    outbyte[3] = 0x72;
+      outbyte[4] = 0x00;
+      //outbyte[5] = 
+      return outbyte;
 }
