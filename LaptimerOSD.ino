@@ -8,6 +8,7 @@
 #define IR_EMITTER_AVAILABLE true
 #define RACER_ID 9
 #define MAX_BEST_TIME 999999999999999
+#define FINISH_LINE_CODE 99
 
 
 class RollingArray
@@ -93,13 +94,7 @@ void setup()
  
   osd.activateOSD();
   
-  //laptimes.add(4000);
-  //laptimes.add(8000);
-  //laptimes.add(12345);
-  
   irrecv.enableIRIn(); // Start the receiver
-  //pinMode(5,OUTPUT);
-  //digitalWrite(5, HIGH); 
 }
 
 
@@ -107,7 +102,7 @@ unsigned long prevTime = 0;
 
 void loop()
 {
-    handleIRSensor();
+  handleIRSensor();
     
   if(prevTime > millis())
   {
@@ -116,17 +111,13 @@ void loop()
   
   prevTime = millis() + 100;
   
-
+  // Lets not clear the screen
+  // osd.clearScreen();
   
-    osd.clearScreen();
-  
-
     char charBuf[50] = {'\0'};  
   // Show only if data available.
   if(laptimes.Size > 0)
-  {
-
-    
+  { 
     String s = laptimes.CurrentTimeStr();
     s.toCharArray(charBuf,50);
     osd.print(charBuf, 0, 11);
@@ -141,18 +132,17 @@ void loop()
   }
   
   // Voltage
-  int v2 = analogRead(2);
+  float v2 = analogRead(2);
   
   v2 *= 5;
   
   float volt = v2/60;
   
   String ss = "";
-ss += volt;
-ss += "v";
-ss.toCharArray(charBuf,50);
+  ss += volt;
+  ss += "v";
+  ss.toCharArray(charBuf,50);
   osd.print(charBuf, 0, 1);
-  
 }
 
 String RollingArray::formatTime(unsigned long t)
