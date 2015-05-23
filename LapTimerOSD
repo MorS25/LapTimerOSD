@@ -103,34 +103,56 @@ void setup()
 }
 
 
+unsigned long prevTime = 0;
+
 void loop()
 {
-  counter = millis()/1000;
-  
-  if(counter%2==0)
+    handleIRSensor();
+    
+  if(prevTime > millis())
   {
-    osd.clearScreen();
+    return;
   }
   
+  prevTime = millis() + 100;
+  
+
+  
+    osd.clearScreen();
+  
+
+    char charBuf[50] = {'\0'};  
   // Show only if data available.
   if(laptimes.Size > 0)
   {
-    char charBuf[50] = {'\0'};
+
     
     String s = laptimes.CurrentTimeStr();
     s.toCharArray(charBuf,50);
-    osd.print(charBuf, 0, 14);
+    osd.print(charBuf, 0, 11);
   
     s = laptimes.PrevTimeStr();
     s.toCharArray(charBuf,50);
-    osd.print(charBuf, 14, 13);
+    osd.print(charBuf, 14, 10);
   
     s = laptimes.BestTimeStr();
     s.toCharArray(charBuf,50);
-    osd.print(charBuf, 14, 14);
-    delay(100);
+    osd.print(charBuf, 14, 11);
   }
-  handleIRSensor();
+  
+  // Voltage
+  int v2 = analogRead(2);
+  
+  v2 *= 5;
+  
+  float volt = v2/60;
+  
+  String ss = "";
+ss += volt;
+ss += "v";
+ss.toCharArray(charBuf,50);
+  osd.print(charBuf, 0, 1);
+  
 }
 
 String RollingArray::formatTime(unsigned long t)
